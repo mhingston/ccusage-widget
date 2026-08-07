@@ -448,5 +448,14 @@ extension Int {
 
 @main
 struct CCUsageWidgetApp: App {
+    @NSApplicationDelegateAdaptor(CCUsageAppDelegate.self) private var appDelegate
     var body: some Scene { WindowGroup("ccusage") { ContentView() }.windowStyle(.hiddenTitleBar) }
+}
+
+final class CCUsageAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        sender.windows.forEach { $0.makeKeyAndOrderFront(nil) }
+        sender.activate(ignoringOtherApps: true)
+        return true
+    }
 }

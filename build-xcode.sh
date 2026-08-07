@@ -3,7 +3,12 @@ set -e
 
 ROOT="${0:A:h}"
 DERIVED="$ROOT/.xcode-build"
-APP="$HOME/Applications/ccusage Widget.app"
+if [[ -w /Applications ]]; then
+  APP="/Applications/ccusage Widget.app"
+else
+  APP="$HOME/Applications/ccusage Widget.app"
+fi
+LAUNCH_AGENT="$HOME/Library/LaunchAgents/local.ccusage.widget.collector.plist"
 DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
 export DEVELOPER_DIR
 
@@ -29,8 +34,16 @@ xcodebuild \
 
 BUILT="$DERIVED/Build/Products/Release/ccusage Widget.app"
 test -d "$BUILT"
-pkill -f "$APP/Contents/MacOS/ccusage Widget" 2>/dev/null || true
+mkdir -p "${APP:h}" "$HOME/Library/LaunchAgents"
+pkill -f "$APP/Contents/MacOS/ccusage-widget" 2>/dev/null || true
 rm -rf "$APP"
 cp -R "$BUILT" "$APP"
+
+cp "$ROOT/local.ccusage.widget.collector.plist" "$LAUNCH_AGENT"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $APP" "$LAUNCH_AGENT"
+launchctl bootout "gui/$(id -u)" "$LAUNCH_AGENT" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$LAUNCH_AGENT"
+launchctl enable "gui/$(id -u)/local.ccusage.widget.collector"
+
 open "$APP"
-echo "Installed $APP"
+echo "Installed $APP and enabled background refresh at login"

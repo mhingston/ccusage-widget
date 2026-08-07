@@ -45,7 +45,7 @@ cd ccusage-widget
 ./build-xcode.sh
 ```
 
-The script detects the first Personal Team configured in Xcode, builds and signs both targets, installs the app under `~/Applications`, and launches it. You can override team detection when needed:
+The script detects the first Personal Team configured in Xcode, builds and signs both targets, installs the app under `/Applications` when writable (otherwise `~/Applications`), launches it, and installs a per-user LaunchAgent for hidden startup at login. You can override team detection when needed:
 
 ```sh
 DEVELOPMENT_TEAM=YOUR_TEAM_ID ./build-xcode.sh
@@ -67,11 +67,11 @@ sudo xcodebuild -runFirstLaunch
 4. Choose the small or medium size.
 5. Click the widget or drag it onto the desktop.
 
-Keep the companion app running so it can refresh usage. To start it automatically, add `~/Applications/ccusage Widget.app` under **System Settings → General → Login Items**.
+The installer configures the companion collector to start hidden at login. Opening the app later reveals its existing window normally. If you explicitly quit the companion app, usage remains at its last snapshot until you reopen it or next sign in.
 
 ## How it works
 
-The companion app runs `ccusage claude daily` and `ccusage claude session`, enriches sessions from Claude's local history, and writes a small snapshot under `~/Library/Application Support/ccusage-widget`. The sandboxed WidgetKit extension receives read-only access to that snapshot.
+The companion app runs `ccusage claude daily` and `ccusage claude session`, enriches sessions from Claude's local history, and writes a small snapshot under `~/Library/Application Support/ccusage-widget`. A per-user LaunchAgent starts this collector invisibly at login, while the sandboxed WidgetKit extension receives read-only access to the snapshot.
 
 Session clicks use the private `ccusage-widget://` URL scheme. The companion app converts the deep link into a local Terminal command:
 

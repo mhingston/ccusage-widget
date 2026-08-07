@@ -7,7 +7,7 @@
 <key>CFBundleExecutable</key><string>ClaudeUsageWidget</string>
 <key>CFBundlePackageType</key><string>XPC!</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>
-<key>CFBundleVersion</key><string>6</string>
+<key>CFBundleVersion</key><string>7</string>
 <key>CCUsageSnapshotPath</key><string>$(CCUSAGE_SNAPSHOT_PATH)</string>
 <key>CFBundleSupportedPlatforms</key><array><string>MacOSX</string></array>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
