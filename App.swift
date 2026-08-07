@@ -132,12 +132,15 @@ final class UsageStore: ObservableObject {
                     }
                     .sorted { $0.period > $1.period }
                 try Self.writeWidgetSnapshot(totals: dailyData.totals, sessions: enrichedSessions)
+                let shouldReloadWidget = Self.shouldReloadWidget(sessionIDs: enrichedSessions.map(\.period))
                 await MainActor.run {
                     self?.daily = dailyData.totals
                     self?.sessions = enrichedSessions
                     self?.lastUpdated = Date()
                     self?.isLoading = false
-                    WidgetCenter.shared.reloadAllTimelines()
+                    if shouldReloadWidget {
+                        WidgetCenter.shared.reloadTimelines(ofKind: "ClaudeUsageWidget")
+                    }
                 }
             } catch {
                 await MainActor.run {
@@ -212,6 +215,19 @@ final class UsageStore: ObservableObject {
         )
         let data = try JSONEncoder().encode(snapshot)
         try data.write(to: directory.appendingPathComponent("widget.json"), options: .atomic)
+    }
+
+    nonisolated private static func shouldReloadWidget(sessionIDs: [String]) -> Bool {
+        let defaults = UserDefaults.standard
+        let previousIDs = Set(defaults.stringArray(forKey: "lastReloadedSessionIDs") ?? [])
+        let currentIDs = Set(sessionIDs)
+        let lastReload = defaults.object(forKey: "lastWidgetReloadAt") as? Date ?? .distantPast
+        let sessionSetChanged = previousIDs != currentIDs
+        let periodicReloadDue = Date().timeIntervalSince(lastReload) >= 15 * 60
+        guard sessionSetChanged || periodicReloadDue else { return false }
+        defaults.set(Array(currentIDs).sorted(), forKey: "lastReloadedSessionIDs")
+        defaults.set(Date(), forKey: "lastWidgetReloadAt")
+        return true
     }
 
     nonisolated private static func run(_ command: String) async throws -> Data {

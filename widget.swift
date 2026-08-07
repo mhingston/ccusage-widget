@@ -65,7 +65,7 @@ struct ClaudeUsageProvider: TimelineProvider {
             } catch {
                 entry = ClaudeUsageEntry(date: Date(), totals: .init(), sessions: [], sessionPage: 0, error: error.localizedDescription)
             }
-            completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300))))
+            completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(15 * 60))))
         }
     }
 
@@ -112,7 +112,11 @@ struct ClaudeUsageWidgetView: View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text("CLAUDE CODE").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-                Spacer(); Image(systemName: "sparkles").foregroundStyle(.orange)
+                Spacer()
+                updatedTime
+                Button(intent: RefreshWidgetIntent()) { Image(systemName: "sparkles") }
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel("Refresh usage")
             }
             Text(entry.totals.totalTokens.compactTokens).font(.system(size: 30, weight: .bold, design: .rounded))
             Text("tokens today").font(.caption).foregroundStyle(.secondary)
@@ -129,15 +133,17 @@ struct ClaudeUsageWidgetView: View {
             HStack {
                 Text("CLAUDE CODE").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
                 Spacer()
+                updatedTime
                 if entry.sessions.count > 2 {
                     Button(intent: PreviousSessionPageIntent()) { Image(systemName: "chevron.left") }
                         .disabled(entry.sessionPage == 0)
                     Text("\(entry.sessionPage + 1)/\(sessionPageCount)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
                     Button(intent: NextSessionPageIntent()) { Image(systemName: "chevron.right") }
                         .disabled(entry.sessionPage >= sessionPageCount - 1)
-                } else {
-                    Image(systemName: "sparkles").foregroundStyle(.orange)
                 }
+                Button(intent: RefreshWidgetIntent()) { Image(systemName: "sparkles") }
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel("Refresh usage")
             }
             HStack(alignment: .lastTextBaseline, spacing: 7) {
                 Text(entry.totals.totalTokens.compactTokens).font(.system(size: 31, weight: .bold, design: .rounded))
@@ -172,6 +178,21 @@ struct ClaudeUsageWidgetView: View {
     }
 
     private var sessionPageCount: Int { max(1, Int(ceil(Double(entry.sessions.count) / 2.0))) }
+
+    private var updatedTime: some View {
+        Text(entry.date, format: .dateTime.hour().minute())
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("Updated \(entry.date.formatted(date: .omitted, time: .shortened))")
+    }
+}
+
+struct RefreshWidgetIntent: AppIntent {
+    static var title: LocalizedStringResource = "Refresh usage"
+    func perform() async throws -> some IntentResult {
+        WidgetCenter.shared.reloadTimelines(ofKind: "ClaudeUsageWidget")
+        return .result()
+    }
 }
 
 struct PreviousSessionPageIntent: AppIntent {

@@ -39,6 +39,17 @@ pkill -f "$APP/Contents/MacOS/ccusage-widget" 2>/dev/null || true
 rm -rf "$APP"
 cp -R "$BUILT" "$APP"
 
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+for DEVELOPMENT_COPY in "$HOME/Applications/ccusage Widget.app" "$BUILT"; do
+  if [[ "$DEVELOPMENT_COPY" != "$APP" && -d "$DEVELOPMENT_COPY" ]]; then
+    pluginkit -r "$DEVELOPMENT_COPY/Contents/PlugIns/ClaudeUsageWidget.appex" 2>/dev/null || true
+    "$LSREGISTER" -u "$DEVELOPMENT_COPY" 2>/dev/null || true
+  fi
+done
+"$LSREGISTER" -f -R -trusted "$APP"
+pluginkit -a "$APP/Contents/PlugIns/ClaudeUsageWidget.appex"
+killall chronod 2>/dev/null || true
+
 cp "$ROOT/local.ccusage.widget.collector.plist" "$LAUNCH_AGENT"
 /usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $APP" "$LAUNCH_AGENT"
 launchctl bootout "gui/$(id -u)" "$LAUNCH_AGENT" 2>/dev/null || true

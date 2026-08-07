@@ -15,6 +15,7 @@ The bundled companion app provides the complete overview and refreshes the deskt
 - Claude Code-only daily token and estimated cost totals
 - Small and medium native WidgetKit layouts
 - Interactive session pagination in the medium widget
+- Visible last-updated time and manual refresh control
 - Session titles, working directories, timestamps, tokens, and cost
 - One-click `claude --resume` deep links
 - Automatic refresh every 60 seconds
@@ -71,7 +72,7 @@ The installer configures the companion collector to start hidden at login. Openi
 
 ## How it works
 
-The companion app runs `ccusage claude daily` and `ccusage claude session`, enriches sessions from Claude's local history, and writes a small snapshot under `~/Library/Application Support/ccusage-widget`. A per-user LaunchAgent starts this collector invisibly at login, while the sandboxed WidgetKit extension receives read-only access to the snapshot.
+The companion app runs `ccusage claude daily` and `ccusage claude session`, enriches sessions from Claude's local history, and writes a small snapshot under `~/Library/Application Support/ccusage-widget`. A per-user LaunchAgent starts this collector invisibly at login, while the sandboxed WidgetKit extension receives read-only access to the snapshot. Session changes request an immediate widget reload; otherwise WidgetKit is refreshed at a budget-friendly 15-minute interval. The star button requests an on-demand refresh from the latest snapshot.
 
 Session clicks use the private `ccusage-widget://` URL scheme. The companion app converts the deep link into a local Terminal command:
 
