@@ -343,12 +343,23 @@ struct ContentView: View {
                   let sessionID = components.queryItems?.first(where: { $0.name == "session" })?.value else { return }
             let directory = components.queryItems?.first(where: { $0.name == "directory" })?.value
                 ?? FileManager.default.homeDirectoryForCurrentUser.path
+            hideCompanionWindow()
             SessionLauncher.open(sessionID: sessionID, directory: directory)
-            NSApplication.shared.hide(nil)
+            // Opening a custom URL can trigger the app's reopen handling after this
+            // callback. Hide once more on the next run-loop turn so only Terminal remains.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                hideCompanionWindow()
+            }
         }
     }
 
     private var sessionPageCount: Int { max(1, Int(ceil(Double(store.sessions.count) / 2.0))) }
+}
+
+@MainActor
+private func hideCompanionWindow() {
+    NSApplication.shared.windows.forEach { $0.orderOut(nil) }
+    NSApplication.shared.hide(nil)
 }
 
 struct WindowAccessor: NSViewRepresentable {
