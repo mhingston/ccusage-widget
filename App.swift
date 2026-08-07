@@ -94,19 +94,30 @@ struct WidgetUsageSnapshot: Codable {
 
 @MainActor
 final class UsageStore: ObservableObject {
+    static let shared = UsageStore()
+
     @Published var daily = UsageTotals()
     @Published var sessions: [SessionRow] = []
     @Published var isLoading = false
     @Published var error: String?
     @Published var lastUpdated: Date?
 
-    private var timer: Timer?
+    private var refreshTimer: DispatchSourceTimer?
+
+    private init() {}
 
     func start() {
+        guard refreshTimer == nil else { return }
         refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        timer.schedule(deadline: .now() + 60, repeating: 60, leeway: .seconds(5))
+        timer.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.refresh()
+            }
         }
+        timer.resume()
+        refreshTimer = timer
     }
 
     func refresh() {
@@ -223,7 +234,7 @@ final class UsageStore: ObservableObject {
         let currentIDs = Set(sessionIDs)
         let lastReload = defaults.object(forKey: "lastWidgetReloadAt") as? Date ?? .distantPast
         let sessionSetChanged = previousIDs != currentIDs
-        let periodicReloadDue = Date().timeIntervalSince(lastReload) >= 15 * 60
+        let periodicReloadDue = Date().timeIntervalSince(lastReload) >= 60
         guard sessionSetChanged || periodicReloadDue else { return false }
         defaults.set(Array(currentIDs).sorted(), forKey: "lastReloadedSessionIDs")
         defaults.set(Date(), forKey: "lastWidgetReloadAt")
@@ -255,7 +266,7 @@ final class UsageStore: ObservableObject {
 }
 
 struct ContentView: View {
-    @StateObject private var store = UsageStore()
+    @ObservedObject var store: UsageStore
     @State private var showSessions = false
     @State private var sessionPage = 0
 
@@ -325,7 +336,6 @@ struct ContentView: View {
         .frame(width: 360)
         .background(.regularMaterial)
         .background(WindowAccessor())
-        .task { store.start() }
         .onChange(of: store.sessions.count) { _ in sessionPage = min(sessionPage, max(0, sessionPageCount - 1)) }
         .onOpenURL { url in
             guard url.scheme == "ccusage-widget", url.host == "resume",
@@ -465,10 +475,15 @@ extension Int {
 @main
 struct CCUsageWidgetApp: App {
     @NSApplicationDelegateAdaptor(CCUsageAppDelegate.self) private var appDelegate
-    var body: some Scene { WindowGroup("ccusage") { ContentView() }.windowStyle(.hiddenTitleBar) }
+    var body: some Scene { WindowGroup("ccusage") { ContentView(store: .shared) }.windowStyle(.hiddenTitleBar) }
 }
 
+@MainActor
 final class CCUsageAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        UsageStore.shared.start()
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         sender.windows.forEach { $0.makeKeyAndOrderFront(nil) }
         sender.activate(ignoringOtherApps: true)
