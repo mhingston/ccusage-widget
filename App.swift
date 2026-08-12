@@ -197,6 +197,7 @@ final class UsageStore: ObservableObject {
                     .replacingOccurrences(of: "(?s)<system-reminder>.*?</system-reminder>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "(?s)<command-name>.*?</command-name>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "(?s)<command-args>.*?</command-args>", with: " ", options: .regularExpression)
+                    .replacingOccurrences(of: "(?s)<command-message>.*?</command-message>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !cleaned.isEmpty && cleaned != "..." { firstPrompt = cleaned }
