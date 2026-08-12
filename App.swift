@@ -191,13 +191,17 @@ final class UsageStore: ObservableObject {
             if let value = content as? String { text = value }
             else if let blocks = content as? [[String: Any]] { text = blocks.compactMap { $0["text"] as? String }.joined(separator: " ") }
             else { text = nil }
-            if let text, !text.contains("<local-command-caveat>") {
+            if let text,
+               !text.contains("<local-command-caveat>"),
+               !text.contains("<local-command-stdout>"),
+               !text.contains("<local-command-stderr>") {
                 let cleaned = text
                     .replacingOccurrences(of: "(?s)<ide_[^>]+>.*?</ide_[^>]+>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "(?s)<system-reminder>.*?</system-reminder>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "(?s)<command-name>.*?</command-name>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "(?s)<command-args>.*?</command-args>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "(?s)<command-message>.*?</command-message>", with: " ", options: .regularExpression)
+                    .replacingOccurrences(of: "(?s)<local-command-(?:stdout|stderr)>.*?</local-command-(?:stdout|stderr)>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !cleaned.isEmpty && cleaned != "..." { firstPrompt = cleaned }
