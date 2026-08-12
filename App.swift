@@ -195,9 +195,11 @@ final class UsageStore: ObservableObject {
                 let cleaned = text
                     .replacingOccurrences(of: "(?s)<ide_[^>]+>.*?</ide_[^>]+>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "(?s)<system-reminder>.*?</system-reminder>", with: " ", options: .regularExpression)
+                    .replacingOccurrences(of: "(?s)<command-name>.*?</command-name>", with: " ", options: .regularExpression)
+                    .replacingOccurrences(of: "(?s)<command-args>.*?</command-args>", with: " ", options: .regularExpression)
                     .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                if !cleaned.isEmpty { firstPrompt = cleaned }
+                if !cleaned.isEmpty && cleaned != "..." { firstPrompt = cleaned }
             }
         }
         guard let prompt = firstPrompt else { return (nil, cwd) }
