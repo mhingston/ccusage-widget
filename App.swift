@@ -249,26 +249,26 @@ final class UsageStore: ObservableObject {
     }
 
     nonisolated private static func run(_ command: String) async throws -> Data {
-        try await withCheckedThrowingContinuation { continuation in
-            let process = Process()
-            let output = Pipe()
-            let errors = Pipe()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-lc", command]
-            process.standardOutput = output
-            process.standardError = errors
-            do {
-                try process.run()
-                process.waitUntilExit()
-                let data = output.fileHandleForReading.readDataToEndOfFile()
-                if process.terminationStatus == 0 {
-                    continuation.resume(returning: data)
-                } else {
-                    let message = String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "ccusage failed"
-                    continuation.resume(throwing: NSError(domain: "ccusage", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: message.trimmingCharacters(in: .whitespacesAndNewlines)]))
-                }
-            } catch { continuation.resume(throwing: error) }
+        let process = Process()
+        let output = Pipe()
+        let errorOutput = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", command]
+        process.standardOutput = output
+        process.standardError = errorOutput
+
+        try process.run()
+        async let outputData = output.fileHandleForReading.readToEnd()
+        async let errorData = errorOutput.fileHandleForReading.readToEnd()
+        process.waitUntilExit()
+
+        let data = try await outputData ?? Data()
+        let errorBytes = try await errorData ?? Data()
+        guard process.terminationStatus == 0 else {
+            let message = String(data: errorBytes, encoding: .utf8) ?? "ccusage failed"
+            throw NSError(domain: "ccusage", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: message.trimmingCharacters(in: .whitespacesAndNewlines)])
         }
+        return data
     }
 }
 
